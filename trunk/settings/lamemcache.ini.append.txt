@@ -1,0 +1,13 @@
+<?php /* #?ini charset="iso-8859-1"?
+
+[lamemcacheSettings]
+servers[]=SERVERNAME;PORT;weight 
+
+cache_enable=true
+namesite=XXXX
+
+[ttlSettings]
+default=86400
+
+*/
+?>

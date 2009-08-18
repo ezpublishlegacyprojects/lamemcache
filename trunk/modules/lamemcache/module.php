@@ -8,17 +8,17 @@ $ViewList         = array();
 
 $ViewList['test'] = array(
     'script'                  => 'test.php',
-	'functions'               => array( 'droit_anonyme' )
+	'functions'               => array( 'public' )
 );
 
 $ViewList['stats_server'] = array(
     'script'                  => 'stats_server.php',
-	'functions'               => array( 'droit_compte' )
+	'functions'               => array( 'private' )
 );
 
 
 
 $FunctionList = array();
-$FunctionList['droit_compte'] = array( );
-$FunctionList['droit_anonyme'] = array( );
+$FunctionList['private'] = array( );
+$FunctionList['public'] = array( );
 ?>

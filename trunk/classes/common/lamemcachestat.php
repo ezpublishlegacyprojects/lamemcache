@@ -4,18 +4,18 @@ define('MEMCACHE_GRAPH_SIZE',200);
 define('MEMCACHE_MAX_ITEM_DUMP',50);
 
 
-class lammcachestat
+class lamemcachestat
 {
 	var $_VERSION          = '$Id: memcache.php,v 1.1.2.3 2008/08/28 18:07:54 mikl Exp $';
 	var $_MEMCACHE_SERVERS = array();
 	var $_ini              = null;
-	
-	function lammcachestat() {
-		
+
+	function lamemcachestat() {
+
 		include_once( 'lib/ezutils/classes/ezini.php' );
 		$this->_ini = eZINI::instance('lamemcache.ini');
 		$aServers = $this->_ini->variable( 'lamemcacheSettings', 'servers' );
-		
+
 		$aIndex = array('host', 'port');
 		if (is_array($aServers) && count($aServers)) {
 			foreach ($aServers as $sServer) {
@@ -27,16 +27,16 @@ class lammcachestat
 				}
 			}
 		}
-		
+
 	}
-	
-	function get_memecache_servers() {
-		
+
+	function get_memcache_servers() {
+
 		return $this->_MEMCACHE_SERVERS;
 	}
-	
+
 	function getStringMMCache() {
-		
+
 		$sReturn = '';
 		if (is_array($this->_MEMCACHE_SERVERS) && count($this->_MEMCACHE_SERVERS)) {
 			foreach($this->_MEMCACHE_SERVERS as $sServer) {
@@ -45,10 +45,10 @@ class lammcachestat
 		}
 		return trim($sReturn, ';');
 	}
-	
+
 	function sendMemcacheCommands($command){
 		$result = array();
-	
+
 		foreach($this->_MEMCACHE_SERVERS as $server){
 			$strs = explode(':',$server);
 			$host = $strs[0];
@@ -57,7 +57,7 @@ class lammcachestat
 		}
 		return $result;
 	}
-	
+
 	function sendMemcacheCommand($server, $port, $command){
 		$error = 0;
 		$errstr = '';
@@ -66,88 +66,88 @@ class lammcachestat
 			//die("Cant connect to:".$server.':'.$port);
 			return false;
 		}
-	
+
 		fwrite($s, $command."\r\n");
-	
+
 		$buf='';
 		while ((!feof($s))) {
 			$buf .= fgets($s, 256);
 			if (strpos($buf,"END\r\n")!==false){ // stat says end
-			    break;
+				break;
 			}
 			if (strpos($buf,"DELETED\r\n")!==false || strpos($buf,"NOT_FOUND\r\n")!==false){ // delete says these
-			    break;
+				break;
 			}
 			if (strpos($buf,"OK\r\n")!==false){ // flush_all says ok
-			    break;
+				break;
 			}
 		}
-	    fclose($s);
-	    return $this->parseMemcacheResults($buf);
+		fclose($s);
+		return $this->parseMemcacheResults($buf);
 	}
-	
+
 	function parseMemcacheResults($str){
-    
+
 		$res = array();
 		$lines = explode("\r\n",$str);
 		$cnt = count($lines);
 		for($i=0; $i< $cnt; $i++){
-		    $line = $lines[$i];
+			$line = $lines[$i];
 			$l = explode(' ',$line,3);
 			if (count($l)==3){
 				$res[$l[0]][$l[1]]=$l[2];
 				if ($l[0]=='VALUE'){ // next line is the value
-				    $res[$l[0]][$l[1]] = array();
-				    list ($flag,$size)=explode(' ',$l[2]);
-				    $res[$l[0]][$l[1]]['stat']=array('flag'=>$flag,'size'=>$size);
-				    $res[$l[0]][$l[1]]['value']=$lines[++$i];
+					$res[$l[0]][$l[1]] = array();
+					list ($flag,$size)=explode(' ',$l[2]);
+					$res[$l[0]][$l[1]]['stat']=array('flag'=>$flag,'size'=>$size);
+					$res[$l[0]][$l[1]]['value']=$lines[++$i];
 				}
 			}elseif($line=='DELETED' || $line=='NOT_FOUND' || $line=='OK'){
-			    return $line;
+				return $line;
 			}
 		}
 		return $res;
-	
+
 	}
-	
+
 	function dumpCacheSlab($server,$slabId,$limit){
-	    list($host,$port) = explode(':',$server);
-	    $resp = $this->sendMemcacheCommand($host,$port,'stats cachedump '.$slabId.' '.$limit);
-	
-	   	return $resp;
+		list($host,$port) = explode(':',$server);
+		$resp = $this->sendMemcacheCommand($host,$port,'stats cachedump '.$slabId.' '.$limit);
+
+		return $resp;
 	}
-	
+
 	function flushServer($server){
-	    list($host,$port) = explode(':',$server);
-	    $resp = $this->sendMemcacheCommand($host,$port,'flush_all');
-	    return $resp;
+		list($host,$port) = explode(':',$server);
+		$resp = $this->sendMemcacheCommand($host,$port,'flush_all');
+		return $resp;
 	}
-	
+
 	function getCacheItems(){
-		 $items = $this->sendMemcacheCommands('stats items');
-		 $serverItems = array();
-		 $totalItems = array();
-		 foreach ($items as $server=>$itemlist){
-		    $serverItems[$server] = array();
-		    $totalItems[$server]=0;
-		    if (!isset($itemlist['STAT'])){
-		        continue;
-		    }
-		
-		    $iteminfo = $itemlist['STAT'];
-		
-		    foreach($iteminfo as $keyinfo=>$value){
-		        if (preg_match('/items\:(\d+?)\:(.+?)$/',$keyinfo,$matches)){
-		            $serverItems[$server][$matches[1]][$matches[2]] = $value;
-		            if ($matches[2]=='number'){
-		                $totalItems[$server] +=$value;
-		            }
-		        }
-		    }
-		 }
-		 return array('items'=>$serverItems,'counts'=>$totalItems);
+		$items = $this->sendMemcacheCommands('stats items');
+		$serverItems = array();
+		$totalItems = array();
+		foreach ($items as $server=>$itemlist){
+			$serverItems[$server] = array();
+			$totalItems[$server]=0;
+			if (!isset($itemlist['STAT'])){
+				continue;
+			}
+
+			$iteminfo = $itemlist['STAT'];
+
+			foreach($iteminfo as $keyinfo=>$value){
+				if (preg_match('/items\:(\d+?)\:(.+?)$/',$keyinfo,$matches)){
+					$serverItems[$server][$matches[1]][$matches[2]] = $value;
+					if ($matches[2]=='number'){
+						$totalItems[$server] +=$value;
+					}
+				}
+			}
+		}
+		return array('items'=>$serverItems,'counts'=>$totalItems);
 	}
-	
+
 	function getMemcacheStats($total=true){
 		$resp = $this->sendMemcacheCommands('stats');
 		if ($total){
@@ -231,33 +231,33 @@ class lammcachestat
 		}
 		return $resp;
 	}
-	
+
 	function duration($ts) {
-	    global $time;
-	    $years = (int)((($time - $ts)/(7*86400))/52.177457);
-	    $rem = (int)(($time-$ts)-($years * 52.177457 * 7 * 86400));
-	    $weeks = (int)(($rem)/(7*86400));
-	    $days = (int)(($rem)/86400) - $weeks*7;
-	    $hours = (int)(($rem)/3600) - $days*24 - $weeks*7*24;
-	    $mins = (int)(($rem)/60) - $hours*60 - $days*24*60 - $weeks*7*24*60;
-	    $str = '';
-	    if($years==1) $str .= "$years year, ";
-	    if($years>1) $str .= "$years years, ";
-	    if($weeks==1) $str .= "$weeks week, ";
-	    if($weeks>1) $str .= "$weeks weeks, ";
-	    if($days==1) $str .= "$days day,";
-	    if($days>1) $str .= "$days days,";
-	    if($hours == 1) $str .= " $hours hour and";
-	    if($hours>1) $str .= " $hours hours and";
-	    if($mins == 1) $str .= " 1 minute";
-	    else $str .= " $mins minutes";
-	    return $str;
+		global $time;
+		$years = (int)((($time - $ts)/(7*86400))/52.177457);
+		$rem = (int)(($time-$ts)-($years * 52.177457 * 7 * 86400));
+		$weeks = (int)(($rem)/(7*86400));
+		$days = (int)(($rem)/86400) - $weeks*7;
+		$hours = (int)(($rem)/3600) - $days*24 - $weeks*7*24;
+		$mins = (int)(($rem)/60) - $hours*60 - $days*24*60 - $weeks*7*24*60;
+		$str = '';
+		if($years==1) $str .= "$years year, ";
+		if($years>1) $str .= "$years years, ";
+		if($weeks==1) $str .= "$weeks week, ";
+		if($weeks>1) $str .= "$weeks weeks, ";
+		if($days==1) $str .= "$days day,";
+		if($days>1) $str .= "$days days,";
+		if($hours == 1) $str .= " $hours hour and";
+		if($hours>1) $str .= " $hours hours and";
+		if($mins == 1) $str .= " 1 minute";
+		else $str .= " $mins minutes";
+		return $str;
 	}
-	
+
 	function graphics_avail() {
 		return extension_loaded('gd');
 	}
-	
+
 	function bsize($s) {
 		foreach (array('','K','M','G') as $i => $k) {
 			if ($s < 1024) break;
@@ -265,20 +265,20 @@ class lammcachestat
 		}
 		return sprintf("%5.1f %sBytes",$s,$k);
 	}
-	
+
 	// create menu entry
 	function menu_entry($ob,$title) {
 		global $PHP_SELF;
 		if ($ob==$_GET['op']){
-		    return "<li><a class=\"child_active\" href=\"$PHP_SELF&op=$ob\">$title</a></li>";
+			return "<li><a class=\"child_active\" href=\"$PHP_SELF&op=$ob\">$title</a></li>";
 		}
 		return "<li><a class=\"active\" href=\"$PHP_SELF&op=$ob\">$title</a></li>";
 	}
-	
+
 	function getMenu(){
-	    
+		 
 		global $PHP_SELF;
-		
+
 		$sHtml = '';
 		$sHtml .= "<ol class=menu>";
 		if ($_GET['op']!=4){
@@ -286,14 +286,14 @@ class lammcachestat
 		} else {
 			$sHtml .= '<li><a href="' . $PHP_SELF . '&op=2}">Back</a></li>';
 		}
-		
+
 		$sHtml .= $this->menu_entry(1,'View Host Stats');
 		$sHtml .= $this->menu_entry(2,'Variables');
-		
+
 		$sHtml .= '</ol>';
 		return $sHtml;
 	}
-	
+
 	function fill_box($im, $x, $y, $w, $h, $color1, $color2,$text='',$placeindex='') {
 		global $col_black;
 		$x1=$x+$w-1;
@@ -333,7 +333,7 @@ class lammcachestat
 	}
 
 
-    function fill_arc($im, $centerX, $centerY, $diameter, $start, $end, $color1,$color2,$text='',$placeindex=0) {
+	function fill_arc($im, $centerX, $centerY, $diameter, $start, $end, $color1,$color2,$text='',$placeindex=0) {
 		$r=$diameter/2;
 		$w=deg2rad((360+$start+($end-$start)/2)%360);
 
@@ -350,7 +350,7 @@ class lammcachestat
 			imageline($im, $centerX, $centerY, $centerX + cos(deg2rad($end))   * $r, $centerY + sin(deg2rad($end))   * $r, $color2);
 			imagefill($im,$centerX + $r*cos($w)/2, $centerY + $r*sin($w)/2, $color2);
 		}
-		
+
 		if ($text) {
 			if ($placeindex>0) {
 				imageline($im,$centerX + $r*cos($w)/2, $centerY + $r*sin($w)/2,$diameter, $placeindex*12,$color1);
